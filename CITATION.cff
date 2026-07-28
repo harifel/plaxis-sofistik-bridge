@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "plaxis-sofistik-bridge"
+authors:
+  - family-names: "Felić"
+    given-names: "Haris"
+    affiliation: "Institute of Soil Mechanics, Foundation Engineering and Computational Geotechnics (IBG), Graz University of Technology"
+repository-code: "https://github.com/harifel/plaxis-sofistik-bridge"
+license: MIT
+preferred-citation:
+  type: conference-paper
+  title: "Enhanced Interoperability between Geotechnical and Structural Engineering for 3D Building Models"
+  authors:
+    - family-names: "Felić"
+      given-names: "Haris"
+    - family-names: "Schlicke"
+      given-names: "Dirk"
+    - family-names: "Granitzer"
+      given-names: "Andreas-Nizar"
+    - family-names: "Tschuchnigg"
+      given-names: "Franz"
+  year: 2023
+  collection-title: "RILEM Bookseries"
+  doi: "10.1007/978-3-031-33211-1_20"
