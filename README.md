@@ -10,11 +10,12 @@ For each direction (x, y, z) the script interpolates cubically from the PLAXIS p
 
 ```
 ├── data/                       - input/output data files
-│   ├── PLAXIS_export.csv       - PLAXIS displacement export (add your own; not tracked)
+│   ├── PLAXIS_export.csv       - PLAXIS displacement export (tracked via Git LFS)
 │   ├── SOFISTIK_settlements.txt
 │   ├── SOFISTIK_support_forces.txt
-│   ├── export_SOFiSTiK.txt     - interpolated output (generated)
-│   └── export_SOFiSTiK.dat     - interpolated output (generated)
+│   ├── export_SOFiSTiK.txt     - interpolated output, readable copy (generated)
+│   └── export_SOFiSTiK.dat     - interpolated output, import this into SOFiSTiK (generated)
+├── graphics/                   - diagnostic plots per direction (generated)
 ├── src/
 │   └── interpolation.py        - main interpolation script
 └── environment.txt             - Python dependencies
@@ -28,13 +29,11 @@ venv\Scripts\activate        # Windows — or: source venv/bin/activate
 pip install -r environment.txt
 ```
 
-Place your PLAXIS export (`;`-delimited CSV) and SOFiSTiK node file in `data/`, then run:
-
 ```bash
 python src/interpolation.py
 ```
 
-Update the `entry_pla` / `entry_sof` filenames in `src/interpolation.py` if yours differ from the defaults.
+This runs against the sample data already in `data/` and writes the export files there plus diagnostic plots to `graphics/`. To use your own data, replace `data/PLAXIS_export.csv` (`;`-delimited CSV) and `data/SOFISTIK_settlements.txt`, or point `entry_pla` / `entry_sof` in the `__main__` block of `src/interpolation.py` at different files.
 
 ## Dependencies
 

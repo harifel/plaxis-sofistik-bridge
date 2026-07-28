@@ -1,10 +1,19 @@
-"""Interpolates PLAXIS displacement results onto SOFiSTiK node coordinates.
+"""Transfers PLAXIS displacement results onto a SOFiSTiK mesh.
 
-For each direction (x, y, z), values are cubic-interpolated from the PLAXIS
-point cloud onto the SOFiSTiK nodes. Nodes outside the PLAXIS convex hull
-(where cubic interpolation returns NaN) fall back to nearest-neighbour
-interpolation. The result is written as a SOFiSTiK-readable .txt/.dat export,
-optionally alongside diagnostic 3D scatter plots per direction.
+Workflow:
+  1. Read the PLAXIS export: node coordinates (x, y) plus the displacement
+     components (ux, uy, uz) at each PLAXIS node.
+  2. Read the SOFiSTiK node coordinates (x, y) that the displacements
+     should be transferred onto.
+  3. For each direction (x, y, z), cubic-interpolate from the PLAXIS point
+     cloud onto the SOFiSTiK nodes. Nodes outside the PLAXIS convex hull
+     (where cubic interpolation returns NaN) fall back to nearest-neighbour
+     interpolation.
+  4. Write the interpolated displacements, in SOFiSTiK node-displacement
+     format, to `export_SOFiSTiK.dat` (this is the file to import into
+     SOFiSTiK) and `export_SOFiSTiK.txt` (the same content, kept readable),
+     plus a diagnostic 3D scatter plot per direction (raw / interpolated /
+     combined) in `graphics/`.
 """
 import os
 
@@ -63,7 +72,11 @@ def build_export(nodes, n_components):
 
 
 def write_sofistik_export(export_dir, export_df):
-    """Writes the interpolation result as SOFiSTiK-readable .txt and .dat files."""
+    """Writes the interpolated node displacements for SOFiSTiK.
+
+    `export_SOFiSTiK.dat` is the file to import into SOFiSTiK; `.txt` is
+    the same data with a readability space after each comma.
+    """
     txt_path = os.path.join(export_dir, 'export_SOFiSTiK.txt')
     dat_path = os.path.join(export_dir, 'export_SOFiSTiK.dat')
     n_value_cols = export_df.shape[1] - 5
@@ -71,12 +84,13 @@ def write_sofistik_export(export_dir, export_df):
     np.savetxt(txt_path, export_df, fmt=fmt)
     with open(txt_path) as f_in, open(dat_path, 'w') as f_out:
         f_out.write(f_in.read().replace(', ', ','))
+    print(f'SOFiSTiK import file written to: {dat_path}')
 
 
 def _label_axes(ax, z_label):
     ax.set_xlabel('x-axis (m)', labelpad=2)
     ax.set_ylabel('y-axis (m)', labelpad=2)
-    ax.set_zlabel(z_label, labelpad=2)
+    ax.set_zlabel(z_label, labelpad=10)
 
 
 def _save_figure(path):
@@ -86,7 +100,7 @@ def _save_figure(path):
 
 def plot_direction(direction, check_col, x_p, y_p, u_component, x_s, y_s, z_zero, grid_component, error_rows, out_dir):
     """Writes the three diagnostic scatter plots (raw / interpolated / combined) for one direction."""
-    label = f'$u_{direction}$'
+    label = f'$u_{direction}$ (m)'
     has_errors = len(error_rows) > 0
 
     fig = plt.figure(figsize=(8.4 * CM, 6 * CM), dpi=700)
@@ -121,7 +135,7 @@ def plot_direction(direction, check_col, x_p, y_p, u_component, x_s, y_s, z_zero
     _save_figure(os.path.join(out_dir, f'003_combinedData_in {direction}.png'))
 
 
-def run_interpolation(entry_pla, entry_sof, export_dir, make_plots=True):
+def run_interpolation(entry_pla, entry_sof, export_dir, graphics_dir=None, make_plots=True):
     x_p, y_p, u = load_plaxis_data(entry_pla)
 
     nodes = load_sofistik_nodes(entry_sof)
@@ -155,15 +169,19 @@ def run_interpolation(entry_pla, entry_sof, export_dir, make_plots=True):
     write_sofistik_export(export_dir, export)
 
     if make_plots:
+        os.makedirs(graphics_dir, exist_ok=True)
         for j, direction in enumerate(DIRECTIONS):
-            plot_direction(direction, 5 - j, x_p, y_p, u[j], x_s, y_s, z_zero, grid[j], error_rows[j], export_dir)
+            plot_direction(direction, 5 - j, x_p, y_p, u[j], x_s, y_s, z_zero, grid[j], error_rows[j], graphics_dir)
 
 
 if __name__ == '__main__':
-    DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
+    BASE_DIR = os.path.dirname(__file__)
+    DATA_DIR = os.path.join(BASE_DIR, '..', 'data')
+    GRAPHICS_DIR = os.path.join(BASE_DIR, '..', 'graphics')
     run_interpolation(
         entry_pla=os.path.join(DATA_DIR, 'PLAXIS_export.csv'),
         entry_sof=os.path.join(DATA_DIR, 'SOFISTIK_settlements.txt'),
         export_dir=DATA_DIR,
+        graphics_dir=GRAPHICS_DIR,
         make_plots=True,
     )
