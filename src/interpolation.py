@@ -136,12 +136,17 @@ def plot_direction(direction, check_col, x_p, y_p, u_component, x_s, y_s, z_zero
 
 
 def run_interpolation(entry_pla, entry_sof, export_dir, graphics_dir=None, make_plots=True):
+    print(f'Reading PLAXIS displacements from: {entry_pla}')
     x_p, y_p, u = load_plaxis_data(entry_pla)
+    print(f'  -> {len(x_p)} PLAXIS nodes with (ux, uy, uz) displacements.')
 
+    print(f'Reading SOFiSTiK nodes from: {entry_sof}')
     nodes = load_sofistik_nodes(entry_sof)
     x_s, y_s = nodes.iloc[:, 1].values, nodes.iloc[:, 2].values
     z_zero = pd.DataFrame(0, index=np.arange(len(x_s)), columns=['z'])
+    print(f'  -> {len(nodes)} SOFiSTiK nodes to receive interpolated displacements.')
 
+    print('Interpolating PLAXIS displacements onto the SOFiSTiK nodes (cubic)...')
     grid = [interpolate.griddata((x_p, y_p), comp, (x_s, y_s), method='cubic') for comp in u]
     nodes.iloc[:, 3] = grid[2]  # Z column <- uz
     nodes.loc[:, 4] = grid[1]   # new column <- uy
@@ -153,7 +158,7 @@ def run_interpolation(entry_pla, entry_sof, export_dir, graphics_dir=None, make_
         check_col = 5 - i
         missing = nodes[nodes.iloc[:, check_col].isnull()]
         if missing.empty:
-            print(f'Your data interpolation contains in {direction} direction no errors!')
+            print(f'  {direction}: cubic interpolation covered every SOFiSTiK node, no gaps.')
             if i == 0:
                 export = build_export(nodes, n_components=3)
         else:
@@ -162,16 +167,20 @@ def run_interpolation(entry_pla, entry_sof, export_dir, graphics_dir=None, make_
             missing.iloc[:, check_col] = nearest
             nodes.update(missing)
             export = build_export(nodes, n_components=i + 1)
-            print(f'Important message:\n Your data interpolation in {direction} direction contains errors '
-                  f'at {len(missing)} nodes. \n Another interpolation mode (neighbour points) has been set!')
+            print(f'  {direction}: {len(missing)} SOFiSTiK node(s) fell outside the PLAXIS mesh footprint '
+                  f'(cubic interpolation returned NaN) -- filled via nearest-neighbour instead.')
         error_rows[i] = missing
 
+    print(f'Writing interpolated displacements for {len(nodes)} nodes...')
     write_sofistik_export(export_dir, export)
 
     if make_plots:
         os.makedirs(graphics_dir, exist_ok=True)
+        print(f'Writing diagnostic plots to: {graphics_dir}')
         for j, direction in enumerate(DIRECTIONS):
             plot_direction(direction, 5 - j, x_p, y_p, u[j], x_s, y_s, z_zero, grid[j], error_rows[j], graphics_dir)
+
+    print('Done.')
 
 
 if __name__ == '__main__':
