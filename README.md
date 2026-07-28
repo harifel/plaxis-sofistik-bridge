@@ -45,11 +45,31 @@ This approach was developed for and described in:
 
 > Felić, H., Schlicke, D., Granitzer, A.-N., Tschuchnigg, F. (2023). *Enhanced Interoperability between Geotechnical and Structural Engineering for 3D Building Models*. RILEM Bookseries. DOI: [10.1007/978-3-031-33211-1_20](https://doi.org/10.1007/978-3-031-33211-1_20)
 
+```bibtex
+@incollection{felic2023interoperability,
+  author    = {Feli{\'c}, Haris and Schlicke, Dirk and Granitzer, Andreas-Nizar and Tschuchnigg, Franz},
+  title     = {Enhanced Interoperability between Geotechnical and Structural Engineering for 3D Building Models},
+  booktitle = {International RILEM Conference on Synergising Expertise towards Sustainability and Robustness of Cement-based Materials and Concrete Structures},
+  series    = {RILEM Bookseries},
+  year      = {2023},
+  doi       = {10.1007/978-3-031-33211-1_20}
+}
+```
+
 ## Citing this repository
 
 If you use this code itself, please cite it as:
 
 > Felić, H. (2026). *plaxis-sofistik-bridge* [Software]. GitHub. https://github.com/harifel/plaxis-sofistik-bridge
+
+```bibtex
+@misc{felic2026plaxissofistikbridge,
+  author       = {Feli{\'c}, Haris},
+  title        = {plaxis-sofistik-bridge},
+  year         = {2026},
+  howpublished = {\url{https://github.com/harifel/plaxis-sofistik-bridge}}
+}
+```
 
 (see [`CITATION.cff`](CITATION.cff) for a machine-readable version — GitHub also exposes this via the "Cite this repository" button in the sidebar.)
 
