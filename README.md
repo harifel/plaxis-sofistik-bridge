@@ -39,6 +39,12 @@ This runs against the sample data already in `data/` and writes the export files
 
 `numpy`, `pandas`, `scipy`, `matplotlib`
 
+## Citation
+
+This approach was developed for and described in:
+
+> Felić, H., Schlicke, D., Granitzer, A.-N., Tschuchnigg, F. (2023). *Enhanced Interoperability between Geotechnical and Structural Engineering for 3D Building Models*. RILEM Bookseries. DOI: [10.1007/978-3-031-33211-1_20](https://doi.org/10.1007/978-3-031-33211-1_20)
+
 ## License
 
 See `LICENSE`.
