@@ -34,6 +34,12 @@ CM = 1 / 2.54  # centimeters -> inches
 
 DIRECTIONS = ('x', 'y', 'z')
 
+RULE = '-' * 60
+
+
+def _step(n, total, title):
+    print(f'\n[{n}/{total}] {title}')
+
 # Column layout of the SOFiSTiK node table after interpolation:
 # 0=Nod 1=X 2=Y 3=Z(<-uz) 4=A 5=(new, <-uy) 6=(new, <-ux)
 VALUE_COLS = (3, 5, 6)  # uz, uy, ux
@@ -75,7 +81,8 @@ def write_sofistik_export(export_dir, export_df):
     """Writes the interpolated node displacements for SOFiSTiK.
 
     `export_SOFiSTiK.dat` is the file to import into SOFiSTiK; `.txt` is
-    the same data with a readability space after each comma.
+    the same data with a readability space after each comma. Returns both
+    paths.
     """
     txt_path = os.path.join(export_dir, 'export_SOFiSTiK.txt')
     dat_path = os.path.join(export_dir, 'export_SOFiSTiK.dat')
@@ -84,7 +91,7 @@ def write_sofistik_export(export_dir, export_df):
     np.savetxt(txt_path, export_df, fmt=fmt)
     with open(txt_path) as f_in, open(dat_path, 'w') as f_out:
         f_out.write(f_in.read().replace(', ', ','))
-    print(f'SOFiSTiK import file written to: {dat_path}')
+    return txt_path, dat_path
 
 
 def _label_axes(ax, z_label):
@@ -136,17 +143,24 @@ def plot_direction(direction, check_col, x_p, y_p, u_component, x_s, y_s, z_zero
 
 
 def run_interpolation(entry_pla, entry_sof, export_dir, graphics_dir=None, make_plots=True):
-    print(f'Reading PLAXIS displacements from: {entry_pla}')
-    x_p, y_p, u = load_plaxis_data(entry_pla)
-    print(f'  -> {len(x_p)} PLAXIS nodes with (ux, uy, uz) displacements.')
+    n_steps = 4 if make_plots else 3
+    print(RULE)
+    print('PLAXIS -> SOFiSTiK displacement interpolation')
+    print(RULE)
 
-    print(f'Reading SOFiSTiK nodes from: {entry_sof}')
+    _step(1, n_steps, 'Reading PLAXIS displacements')
+    print(f'      file : {entry_pla}')
+    x_p, y_p, u = load_plaxis_data(entry_pla)
+    print(f'      nodes: {len(x_p)} (ux, uy, uz)')
+
+    _step(2, n_steps, 'Reading SOFiSTiK nodes')
+    print(f'      file : {entry_sof}')
     nodes = load_sofistik_nodes(entry_sof)
     x_s, y_s = nodes.iloc[:, 1].values, nodes.iloc[:, 2].values
     z_zero = pd.DataFrame(0, index=np.arange(len(x_s)), columns=['z'])
-    print(f'  -> {len(nodes)} SOFiSTiK nodes to receive interpolated displacements.')
+    print(f'      nodes: {len(nodes)}')
 
-    print('Interpolating PLAXIS displacements onto the SOFiSTiK nodes (cubic)...')
+    _step(3, n_steps, 'Interpolating (cubic, nearest-neighbour fallback)')
     grid = [interpolate.griddata((x_p, y_p), comp, (x_s, y_s), method='cubic') for comp in u]
     nodes.iloc[:, 3] = grid[2]  # Z column <- uz
     nodes.loc[:, 4] = grid[1]   # new column <- uy
@@ -158,7 +172,7 @@ def run_interpolation(entry_pla, entry_sof, export_dir, graphics_dir=None, make_
         check_col = 5 - i
         missing = nodes[nodes.iloc[:, check_col].isnull()]
         if missing.empty:
-            print(f'  {direction}: cubic interpolation covered every SOFiSTiK node, no gaps.')
+            print(f'      {direction}: OK, no gaps')
             if i == 0:
                 export = build_export(nodes, n_components=3)
         else:
@@ -167,26 +181,33 @@ def run_interpolation(entry_pla, entry_sof, export_dir, graphics_dir=None, make_
             missing.iloc[:, check_col] = nearest
             nodes.update(missing)
             export = build_export(nodes, n_components=i + 1)
-            print(f'  {direction}: {len(missing)} SOFiSTiK node(s) fell outside the PLAXIS mesh footprint '
-                  f'(cubic interpolation returned NaN) -- filled via nearest-neighbour instead.')
+            print(f'      {direction}: {len(missing)} node(s) outside the PLAXIS mesh footprint, '
+                  f'patched via nearest-neighbour')
         error_rows[i] = missing
 
-    print(f'Writing interpolated displacements for {len(nodes)} nodes...')
-    write_sofistik_export(export_dir, export)
+    txt_path, dat_path = write_sofistik_export(export_dir, export)
 
     if make_plots:
+        _step(4, n_steps, 'Writing results')
         os.makedirs(graphics_dir, exist_ok=True)
-        print(f'Writing diagnostic plots to: {graphics_dir}')
         for j, direction in enumerate(DIRECTIONS):
             plot_direction(direction, 5 - j, x_p, y_p, u[j], x_s, y_s, z_zero, grid[j], error_rows[j], graphics_dir)
+        print(f'      SOFiSTiK import file : {dat_path}')
+        print(f'      readable copy        : {txt_path}')
+        print(f'      diagnostic plots     : {graphics_dir}')
+    else:
+        print(f'      SOFiSTiK import file : {dat_path}')
+        print(f'      readable copy        : {txt_path}')
 
-    print('Done.')
+    print(RULE)
+    print(f'Done. {len(nodes)} nodes written.')
+    print(RULE)
 
 
 if __name__ == '__main__':
-    BASE_DIR = os.path.dirname(__file__)
-    DATA_DIR = os.path.join(BASE_DIR, '..', 'data')
-    GRAPHICS_DIR = os.path.join(BASE_DIR, '..', 'graphics')
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    DATA_DIR = os.path.normpath(os.path.join(BASE_DIR, '..', 'data'))
+    GRAPHICS_DIR = os.path.normpath(os.path.join(BASE_DIR, '..', 'graphics'))
     run_interpolation(
         entry_pla=os.path.join(DATA_DIR, 'PLAXIS_export.csv'),
         entry_sof=os.path.join(DATA_DIR, 'SOFISTIK_settlements.txt'),
