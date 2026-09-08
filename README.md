@@ -15,8 +15,8 @@ The repo also includes two SOFiSTiK scripts (CADINP/URSULA) that generate the in
 ├── graphics/                   - diagnostic plots per direction (generated)
 ├── src/
 │   ├── interpolation.py                    - main interpolation script
-│   ├── export_slab_displacements.txt       - SOFiSTiK script: exports slab node displacements (uz)
-│   └── export_slab_support_forces.txt      - SOFiSTiK script: exports slab support forces (PZ)
+│   ├── export_slab_displacements.dat       - SOFiSTiK script: exports slab node displacements (uz)
+│   └── export_slab_support_forces.dat      - SOFiSTiK script: exports slab support forces (PZ)
 └── environment.txt             - Python dependencies
 ```
 ## Setup
@@ -55,13 +55,15 @@ This approach was developed for and described in:
 ```
 ## Citing this repository
 If you use this code itself, please cite it as:
-> Felić, H. (2026). *plaxis-sofistik-bridge* [Software]. GitHub. https://github.com/harifel/plaxis-sofistik-bridge
+> Felić, H. (2026). *plaxis-sofistik-bridge* [Software]. Zenodo. https://doi.org/10.5281/zenodo.22661264
 ```bibtex
-@misc{felic2026plaxissofistikbridge,
-  author       = {Feli{\'c}, Haris},
-  title        = {plaxis-sofistik-bridge},
-  year         = {2026},
-  howpublished = {\url{https://github.com/harifel/plaxis-sofistik-bridge}}
+@software{felic2026plaxissofistikbridge,
+  author    = {Feli{\'c}, Haris},
+  title     = {plaxis-sofistik-bridge},
+  year      = {2026},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.22661264},
+  url       = {https://doi.org/10.5281/zenodo.22661264}
 }
 ```
 (see [`CITATION.cff`](CITATION.cff) for a machine-readable version — GitHub also exposes this via the "Cite this repository" button in the sidebar.)
