@@ -1,0 +1,92 @@
+$===============================================================================
+$ SOFiSTiK CADINP/URSULA Script
+$ Purpose : Export vertical nodal displacements (uz) of a foundation slab
+$           at a given elevation, within a rectangular plan-view boundary.
+$
+$ Method  : 1) Read all node coordinates from the CDB (result database).
+$           2) Filter nodes lying on the slab elevation (z = Z_SLAB) and
+$              inside the rectangular footprint [X_MIN, X_MAX] x [Y_MIN, Y_MAX].
+$           3) Query the vertical displacement (uz) for each filtered node
+$              from load case URS_LC.
+$           4) Write node ID, coordinates, and uz [mm] to a text table.
+$
+$ Output  : SOFISTIK_settlements.txt  (columns: Node, X, Y, Z, uz [mm])
+$
+$ Usage   : Adjust the parameters in the "USER PARAMETERS" block below to
+$           match your project geometry and load case, then run this
+$           script inside the SOFiSTiK Teddy/URSULA environment.
+$
+$ Notes   : - Coordinate/displacement units follow the project's SOFiSTiK
+$             base units (typically [m] for coordinates); displacements
+$             are converted to millimetres (factor 1000) for readability.
+$           - Node coordinate matching uses a small numerical tolerance
+$             (EPS) to avoid floating-point exclusion of boundary nodes.
+$           - Maximum node count is bounded by MAX_NODES; increase if the
+$             model exceeds this number of nodes.
+$===============================================================================
+
+!#!Kapitel Export Results - Displacements
++prog template urs:13 -e
+KOPF Reading vertical displacements of foundation slab nodes
+
+$-------------------------------------------------------------------------------
+$ USER PARAMETERS  (edit these for your project)
+$-------------------------------------------------------------------------------
+LET#Z_SLAB     0.0     $ elevation of the foundation slab [m]
+LET#X_MIN      0.0     $ plan-view boundary, minimum X [m]
+LET#X_MAX      17.5    $ plan-view boundary, maximum X [m]
+LET#Y_MIN      0.0     $ plan-view boundary, minimum Y [m]
+LET#Y_MAX      17.5    $ plan-view boundary, maximum Y [m]
+LET#EPS        0.0001  $ coordinate matching tolerance [m]
+LET#URS_LC     10      $ load case number to query displacements from
+LET#MAX_NODES  1000000 $ upper bound on number of nodes to scan
+
+$-------------------------------------------------------------------------------
+$ STEP 1: Read all node coordinates from the CDB
+$-------------------------------------------------------------------------------
+LET#n       0
+LET#CDB_LEN 0
+LET#CDB_IER 0
+
+@KEY NODE 0
+LOOP #MAX_NODES  $ outer/inner loop pair required by URSULA CDB read cursor
+ LOOP 1000
+  LET#helvec(#n) @nr       $ node ID
+  LET#xvec(#n)   @XYZ      $ X coordinate
+  LET#yvec(#n)   @XYZ(1)   $ Y coordinate
+  LET#zvec(#n)   @XYZ(2)   $ Z coordinate
+  LET#n #n+1               $ running node counter
+ ENDLOOP #cdb_ier<2
+ENDLOOP #cdb_ier<2
+LET#n #n-1                  $ correct for final increment past last node
+
+$-------------------------------------------------------------------------------
+$ STEP 2: Filter nodes on the slab elevation and within the plan boundary,
+$          then query displacement for each match
+$-------------------------------------------------------------------------------
+LET#a  0   $ index over all scanned nodes
+LET#aa 0   $ index over matched (filtered) nodes
+
+LOOP #n
+ IF ((#zvec(#a) > #Z_SLAB-#EPS) & (#zvec(#a) < #Z_SLAB+#EPS)) &            $ on slab elevation
+    ((#xvec(#a) >= #X_MIN-#EPS) & (#xvec(#a) <= #X_MAX+#EPS)) &           $ within X range
+    ((#yvec(#a) >= #Y_MIN-#EPS) & (#yvec(#a) <= #Y_MAX+#EPS))             $ within Y range
+
+   LET#nodvec(#aa) #helvec(#a)
+   @KEY N_DISP #URS_LC #nodvec(#aa)
+   LET#uz_vec(#aa) @3*1000   $ vertical displacement, converted to [mm]
+
+   TXA #(#helvec(#a),10.0) #(#xvec(#a),15.9) #(#yvec(#a),15.9) #(#zvec(#a),15.9) #(#uz_vec(#aa),10.6)
+
+   LET#aa #aa+1
+ ENDIF
+ LET#a #a+1
+ENDLOOP
+
+STO#uz_vec
+ENDE
+
+$-------------------------------------------------------------------------------
+$ Export the result listing to a plain-text file
+$-------------------------------------------------------------------------------
++sys copy $(projekt).lst SOFISTIK_settlements.txt
