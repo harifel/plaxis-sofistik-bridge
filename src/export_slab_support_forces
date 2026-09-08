@@ -1,0 +1,96 @@
+$===============================================================================
+$ SOFiSTiK CADINP/URSULA Script
+$ Purpose : Export vertical support reaction / displacement values (PZ) of a
+$           foundation slab at a given elevation, within a rectangular
+$           plan-view boundary.
+$
+$ Method  : 1) Read all node coordinates from the CDB (result database).
+$           2) Filter nodes lying on the slab elevation (z = Z_SLAB) and
+$              inside the rectangular footprint [X_MIN, X_MAX] x [Y_MIN, Y_MAX].
+$           3) Query the vertical component (PZ) for each filtered node
+$              from load case URS_LC, using the N_DISPC record.
+$           4) Write node ID, coordinates, and PZ to a text table.
+$
+$ Output  : SOFISTIK_support_forces.txt  (columns: Node, X, Y, Z, PZ)
+$
+$ Usage   : Adjust the parameters in the "USER PARAMETERS" block below to
+$           match your project geometry and load case, then run this
+$           script inside the SOFiSTiK Teddy/URSULA environment.
+$
+$ Notes   : - Coordinate units follow the project's SOFiSTiK base units
+$             (typically [m]). PZ units follow the N_DISPC record
+$             definition for the queried load case (commonly a force,
+$             e.g. [kN], for support reactions — verify against your
+$             model's support/spring definitions).
+$           - Node coordinate matching uses a small numerical tolerance
+$             (EPS) to avoid floating-point exclusion of boundary nodes.
+$           - Maximum node count is bounded by MAX_NODES; increase if the
+$             model exceeds this number of nodes.
+$===============================================================================
+
++prog template
+
+$-------------------------------------------------------------------------------
+$ USER PARAMETERS  (edit these for your project)
+$-------------------------------------------------------------------------------
+LET#Z_SLAB     0.0     $ elevation of the foundation slab [m]
+LET#X_MIN      0.0     $ plan-view boundary, minimum X [m]
+LET#X_MAX      17.5    $ plan-view boundary, maximum X [m]
+LET#Y_MIN      0.0     $ plan-view boundary, minimum Y [m]
+LET#Y_MAX      17.5    $ plan-view boundary, maximum Y [m]
+LET#EPS        0.0001  $ coordinate matching tolerance [m]
+LET#URS_LC     10      $ load case number to query support values from
+LET#MAX_NODES  1000000 $ upper bound on number of nodes to scan
+
+$-------------------------------------------------------------------------------
+$ STEP 1: Reset the output list header
+$-------------------------------------------------------------------------------
+SEIT -1 Nzei 9999 Form 4  $ delete default listing head
+
+$-------------------------------------------------------------------------------
+$ STEP 2: Read all node coordinates from the CDB
+$-------------------------------------------------------------------------------
+LET#n       0
+LET#CDB_LEN 0
+LET#CDB_IER 0
+
+@KEY NODE 0
+LOOP #MAX_NODES  $ outer/inner loop pair required by URSULA CDB read cursor
+ LOOP 1000
+  LET#helvec(#n) @nr       $ node ID
+  LET#xvec(#n)   @XYZ      $ X coordinate
+  LET#yvec(#n)   @XYZ(1)   $ Y coordinate
+  LET#zvec(#n)   @XYZ(2)   $ Z coordinate
+  LET#n #n+1               $ running node counter
+ ENDLOOP #CDB_IER<2
+ENDLOOP #CDB_IER<2
+LET#n #n-1                  $ correct for final increment past last node
+
+$-------------------------------------------------------------------------------
+$ STEP 3: Filter nodes on the slab elevation and within the plan boundary,
+$          then query the vertical support value for each match
+$-------------------------------------------------------------------------------
+LET#a  0   $ index over all scanned nodes
+LET#aa 0   $ index over matched (filtered) nodes
+
+LOOP #n
+ IF ((#zvec(#a) > #Z_SLAB-#EPS) & (#zvec(#a) < #Z_SLAB+#EPS)) &            $ on slab elevation
+    ((#xvec(#a) >= #X_MIN-#EPS) & (#xvec(#a) <= #X_MAX+#EPS)) &           $ within X range
+    ((#yvec(#a) >= #Y_MIN-#EPS) & (#yvec(#a) <= #Y_MAX+#EPS))             $ within Y range
+
+   LET#nodvec(#aa) #helvec(#a)
+   @KEY N_DISPC #URS_LC #nodvec(#aa)
+   LET#pzvec(#aa) @PZ        $ vertical support value (PZ)
+
+   TXA #(#helvec(#a),10.0) #(#xvec(#a),15.9) #(#yvec(#a),15.9) #(#zvec(#a),15.9) #(#pzvec(#aa),10.6)
+
+   LET#aa #aa+1
+ ENDIF
+ LET#a #a+1
+ENDLOOP
+
+$-------------------------------------------------------------------------------
+$ STEP 4: Export the result listing to a plain-text file
+$-------------------------------------------------------------------------------
+ENDE
++sys copy $(projekt).lst SOFISTIK_support_forces.txt
